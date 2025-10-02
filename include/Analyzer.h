@@ -20,5 +20,6 @@ public:
     Analyzer(const PDFParser &p);
     void computeBreakdown();
     void printSummary() const;
+    void printFileSize() const;
     const PDFBreakdown &getBreakdown() const;
 };

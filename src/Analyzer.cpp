@@ -14,17 +14,16 @@ void Analyzer::computeBreakdown()
     size_t accountedSize = 0;
     for (const auto &obj : parser.getObjects())
     {
-        size_t objSize = obj.endOffset - obj.startOffset;
-        accountedSize += objSize;
+        accountedSize += obj.contentSize;
 
         if (obj.type == "Image")
-            breakdown.imagesSize += objSize;
+            breakdown.imagesSize += obj.contentSize;
         else if (obj.type == "Font")
-            breakdown.fontsSize += objSize;
+            breakdown.fontsSize += obj.contentSize;
         else if (obj.type == "Metadata")
-            breakdown.metadataSize += objSize;
+            breakdown.metadataSize += obj.contentSize;
         else
-            breakdown.textSize += objSize;
+            breakdown.textSize += obj.contentSize;
     }
 
     if (accountedSize < breakdown.totalSize)
@@ -44,4 +43,9 @@ void Analyzer::printSummary() const
 const PDFBreakdown &Analyzer::getBreakdown() const
 {
     return breakdown;
+}
+
+void Analyzer::printFileSize() const
+{
+    std::cout << "Total PDF File Size: " << breakdown.totalSize << " bytes\n";
 }
