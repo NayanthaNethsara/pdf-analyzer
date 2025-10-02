@@ -6,7 +6,7 @@ CXXFLAGS = -std=c++17 -Wall -O2
 INCLUDE_DIR = include
 SRC_DIR = src
 BUILD_DIR = build
-DATA_DIR = data   # Put test PDFs here
+DATA_DIR = data
 
 # Source files
 SRCS = $(SRC_DIR)/main.cpp $(SRC_DIR)/PDFParser.cpp $(SRC_DIR)/Analyzer.cpp
@@ -24,7 +24,7 @@ $(TARGET): $(SRCS)
 # Run test
 test: $(TARGET)
 	@echo "Running PDF analyzer on test file..."
-	./$(TARGET) $(DATA_DIR)/sample.pdf
+	./$(TARGET) ./$(DATA_DIR)/sample.pdf
 
 # Clean build
 clean:
