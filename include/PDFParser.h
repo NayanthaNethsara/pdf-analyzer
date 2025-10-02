@@ -6,8 +6,11 @@ struct PDFObject
 {
     size_t startOffset;
     size_t endOffset;
-    std::string type;   // "Image", "Font", "Metadata", "Text"
-    size_t contentSize; // size of actual content/stream
+    std::string type;      // "Image", "Font", "Metadata", "Text"
+    size_t contentSize;    // total bytes
+    size_t realTextSize;   // BT...ET
+    size_t vectorTextSize; // path-based text
+    size_t otherTextSize;  // leftover
 };
 
 class PDFParser

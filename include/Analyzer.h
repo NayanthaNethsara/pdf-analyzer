@@ -7,7 +7,11 @@ struct PDFBreakdown
     size_t imagesSize = 0;
     size_t fontsSize = 0;
     size_t metadataSize = 0;
-    size_t textSize = 0;
+
+    size_t textSize = 0;       // total text size
+    size_t realTextSize = 0;   // BT ... ET streams
+    size_t vectorTextSize = 0; // vectorized glyphs
+    size_t otherTextSize = 0;  // leftover text objects
 };
 
 class Analyzer

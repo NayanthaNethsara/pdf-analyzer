@@ -22,8 +22,12 @@ void Analyzer::computeBreakdown()
             breakdown.fontsSize += obj.contentSize;
         else if (obj.type == "Metadata")
             breakdown.metadataSize += obj.contentSize;
-        else
-            breakdown.textSize += obj.contentSize;
+        else if (obj.type == "Text")
+        {
+            breakdown.realTextSize += obj.realTextSize;
+            breakdown.vectorTextSize += obj.vectorTextSize;
+            breakdown.otherTextSize += obj.otherTextSize;
+        }
     }
 
     if (accountedSize < breakdown.totalSize)
@@ -38,6 +42,9 @@ void Analyzer::printSummary() const
     std::cout << "Fonts: " << breakdown.fontsSize << " bytes\n";
     std::cout << "Metadata: " << breakdown.metadataSize << " bytes\n";
     std::cout << "Text: " << breakdown.textSize << " bytes\n";
+    std::cout << "  - Real Text (BT...ET): " << breakdown.realTextSize << " bytes\n";
+    std::cout << "  - Vector Text: " << breakdown.vectorTextSize << " bytes\n";
+    std::cout << "  - Other Text: " << breakdown.otherTextSize << " bytes\n";
 }
 
 const PDFBreakdown &Analyzer::getBreakdown() const

@@ -1,6 +1,6 @@
 #include "PDFParser.h"
 #include <fstream>
-#include <cstring> // for memcmp
+#include <cstring>
 
 PDFParser::PDFParser(const std::string &path) : filePath(path) {}
 
@@ -19,7 +19,7 @@ bool PDFParser::load()
     return true;
 }
 
-// Binary-safe helper to find a pattern in content
+// binary-safe search
 size_t findPattern(const std::vector<unsigned char> &data, size_t start,
                    const char *pattern, size_t patternLen)
 {
@@ -38,17 +38,17 @@ void PDFParser::parseObjects()
 
     while (pos < content.size())
     {
-        // Look for " obj"
+        // find " obj"
         size_t objStart = findPattern(content, pos, " obj", 4);
         if (objStart == std::string::npos)
             break;
 
-        // Find start of line (to get object number, optional)
+        // find start of line
         size_t lineStart = objStart;
         while (lineStart > 0 && content[lineStart - 1] != '\n' && content[lineStart - 1] != '\r')
             --lineStart;
 
-        // Look for "endobj"
+        // find "endobj"
         size_t objEnd = findPattern(content, objStart, "endobj", 6);
         if (objEnd == std::string::npos)
             break;
@@ -57,36 +57,58 @@ void PDFParser::parseObjects()
         size_t contentSize = objEnd - lineStart;
         std::string type = "Text"; // default
 
-        // Check object content for type keywords
+        // check for stream content
         size_t streamPos = findPattern(content, lineStart, "stream", 6);
         size_t endStreamPos = findPattern(content, lineStart, "endstream", 9);
         if (streamPos != std::string::npos && endStreamPos != std::string::npos && streamPos < objEnd)
         {
             size_t streamStart = streamPos + 6;
-            // skip possible newline
             if (streamStart < content.size() && (content[streamStart] == '\r' || content[streamStart] == '\n'))
                 streamStart++;
             contentSize = endStreamPos - streamStart;
         }
 
-        // Detect type by keywords
-        size_t objLen = objEnd - lineStart;
-        if (objLen > 0)
-        {
-            std::string objSnippet;
-            if (objLen > 100)
-                objLen = 100; // first 100 bytes to check
-            objSnippet = std::string(content.begin() + lineStart, content.begin() + lineStart + objLen);
+        // create snippet for analysis (first 100 bytes or full)
+        size_t snippetLen = std::min(static_cast<size_t>(100), objEnd - lineStart);
+        std::string snippet(content.begin() + lineStart, content.begin() + lineStart + snippetLen);
 
-            if (objSnippet.find("/XObject") != std::string::npos)
-                type = "Image";
-            else if (objSnippet.find("/Font") != std::string::npos)
-                type = "Font";
-            else if (objSnippet.find("/Metadata") != std::string::npos)
-                type = "Metadata";
+        // detect type
+        if (snippet.find("/XObject") != std::string::npos)
+            type = "Image";
+        else if (snippet.find("/Font") != std::string::npos)
+            type = "Font";
+        else if (snippet.find("/Metadata") != std::string::npos)
+            type = "Metadata";
+
+        // initialize text subcategories
+        size_t realText = 0, vectorText = 0, otherText = 0;
+
+        if (type == "Text")
+        {
+            std::string objContent(content.begin() + lineStart, content.begin() + objEnd);
+
+            // Real Text: BT ... ET
+            size_t bt = objContent.find("BT");
+            size_t et = objContent.find("ET", bt);
+            if (bt != std::string::npos && et != std::string::npos && et > bt)
+            {
+                realText = et + 2 - bt;
+            }
+
+            // Vectorized text: path operators (m, l, c)
+            if (objContent.find(" m") != std::string::npos ||
+                objContent.find(" l") != std::string::npos ||
+                objContent.find(" c") != std::string::npos)
+            {
+                vectorText = objContent.size();
+            }
+
+            // Other text: remaining bytes
+            if (objContent.size() > realText + vectorText)
+                otherText = objContent.size() - (realText + vectorText);
         }
 
-        objects.push_back({lineStart, objEnd, type, contentSize});
+        objects.push_back({lineStart, objEnd, type, contentSize, realText, vectorText, otherText});
         pos = objEnd;
     }
 }
