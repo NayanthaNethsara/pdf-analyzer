@@ -26,6 +26,9 @@ test: $(TARGET)
 	@echo "Running PDF analyzer on test file..."
 	./$(TARGET) ./$(DATA_DIR)/sample.pdf
 
+	@echo "Running PDF analyzer on another test file..."
+	./$(TARGET) ./$(DATA_DIR)/sample-word.pdf
+
 # Clean build
 clean:
 	rm -f $(TARGET)
