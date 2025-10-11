@@ -11,6 +11,11 @@ struct PDFObject
     size_t realTextSize;   // BT...ET
     size_t vectorTextSize; // path-based text
     size_t otherTextSize;  // leftover
+    // Image-specific metadata (filled when type == "Image" when possible)
+    std::string imageName;   // resource name or fallback
+    std::string imageFormat; // e.g. "JPEG", "PNG", "Flate"
+    size_t width = 0;
+    size_t height = 0;
 };
 
 class PDFParser

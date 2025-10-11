@@ -5,6 +5,8 @@ struct PDFBreakdown
 {
     size_t totalSize = 0;
     size_t imagesSize = 0;
+    size_t imageCount = 0;
+    std::vector<size_t> imageSizes; // sizes of individual image objects
     size_t fontsSize = 0;
     size_t metadataSize = 0;
 

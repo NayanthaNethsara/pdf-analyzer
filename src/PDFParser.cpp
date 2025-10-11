@@ -108,7 +108,68 @@ void PDFParser::parseObjects()
                 otherText = objContent.size() - (realText + vectorText);
         }
 
-        objects.push_back({lineStart, objEnd, type, contentSize, realText, vectorText, otherText});
+        // prepare PDFObject and attempt to fill image metadata
+        PDFObject pobj;
+        pobj.startOffset = lineStart;
+        pobj.endOffset = objEnd;
+        pobj.type = type;
+        pobj.contentSize = contentSize;
+        pobj.realTextSize = realText;
+        pobj.vectorTextSize = vectorText;
+        pobj.otherTextSize = otherText;
+
+        if (type == "Image")
+        {
+            std::string objContent(content.begin() + lineStart, content.begin() + objEnd);
+            // Try to find a Name: /Name <name>
+            size_t namePos = objContent.find("/Name");
+            if (namePos != std::string::npos)
+            {
+                size_t start = namePos + 5;
+                while (start < objContent.size() && isspace((unsigned char)objContent[start]))
+                    ++start;
+                size_t end = start;
+                while (end < objContent.size() && !isspace((unsigned char)objContent[end]) && objContent[end] != '/' && objContent[end] != '>')
+                    ++end;
+                pobj.imageName = objContent.substr(start, end - start);
+            }
+
+            // Try to detect filter/format
+            if (objContent.find("/Filter /DCTDecode") != std::string::npos || objContent.find("/DCTDecode") != std::string::npos)
+                pobj.imageFormat = "JPEG";
+            else if (objContent.find("/Filter /FlateDecode") != std::string::npos || objContent.find("/FlateDecode") != std::string::npos)
+                pobj.imageFormat = "Flate";
+            else if (objContent.find("/Filter /JPXDecode") != std::string::npos || objContent.find("/JPXDecode") != std::string::npos)
+                pobj.imageFormat = "JPEG2000";
+
+            // Try to find Width and Height
+            size_t wpos = objContent.find("/Width");
+            if (wpos != std::string::npos)
+            {
+                size_t start = wpos + 6;
+                while (start < objContent.size() && isspace((unsigned char)objContent[start]))
+                    ++start;
+                size_t end = start;
+                while (end < objContent.size() && isdigit((unsigned char)objContent[end]))
+                    ++end;
+                if (end > start)
+                    pobj.width = std::stoul(objContent.substr(start, end - start));
+            }
+            size_t hpos = objContent.find("/Height");
+            if (hpos != std::string::npos)
+            {
+                size_t start = hpos + 7;
+                while (start < objContent.size() && isspace((unsigned char)objContent[start]))
+                    ++start;
+                size_t end = start;
+                while (end < objContent.size() && isdigit((unsigned char)objContent[end]))
+                    ++end;
+                if (end > start)
+                    pobj.height = std::stoul(objContent.substr(start, end - start));
+            }
+        }
+
+        objects.push_back(pobj);
         pos = objEnd;
     }
 }
