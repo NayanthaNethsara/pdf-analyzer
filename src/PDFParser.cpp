@@ -1,6 +1,9 @@
 #include "PDFParser.h"
 #include <fstream>
 #include <cstring>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sstream>
 
 PDFParser::PDFParser(const std::string &path) : filePath(path) {}
 
@@ -29,6 +32,17 @@ size_t findPattern(const std::vector<unsigned char> &data, size_t start,
             return i;
     }
     return std::string::npos;
+}
+
+// Helper to make directory if not exists
+static bool ensureDirectory(const std::string &dir)
+{
+#ifdef _WIN32
+    int ret = _mkdir(dir.c_str());
+#else
+    int ret = mkdir(dir.c_str(), 0755);
+#endif
+    return (ret == 0 || errno == EEXIST);
 }
 
 void PDFParser::parseObjects()
@@ -182,4 +196,59 @@ const std::vector<PDFObject> &PDFParser::getObjects() const
 size_t PDFParser::getFileSize() const
 {
     return content.size();
+}
+
+std::vector<std::string> PDFParser::exportImages(const std::string &outDir) const
+{
+    std::vector<std::string> outFiles;
+    if (!ensureDirectory(outDir))
+        return outFiles;
+
+    size_t idx = 0;
+    for (const auto &o : objects)
+    {
+        if (o.type != "Image")
+            continue;
+
+        // attempt to find stream region inside the object
+        size_t objStart = o.startOffset;
+        size_t objEnd = o.endOffset;
+        size_t streamPos = findPattern(content, objStart, "stream", 6);
+        size_t endStreamPos = findPattern(content, objStart, "endstream", 9);
+        size_t streamStart = objStart;
+        size_t streamLen = o.contentSize;
+        if (streamPos != std::string::npos && endStreamPos != std::string::npos && streamPos < objEnd)
+        {
+            streamStart = streamPos + 6;
+            if (streamStart < content.size() && (content[streamStart] == '\r' || content[streamStart] == '\n'))
+                streamStart++;
+            streamLen = endStreamPos - streamStart;
+        }
+
+        std::string ext = "bin";
+        if (o.imageFormat == "JPEG")
+            ext = "jpg";
+        else if (o.imageFormat == "PNG")
+            ext = "png";
+        else if (o.imageFormat == "JPEG2000")
+            ext = "jp2";
+        else if (o.imageFormat == "Flate")
+            ext = "dat";
+
+        ++idx;
+        std::ostringstream fname;
+        fname << outDir << "/image-" << idx;
+        if (!o.imageName.empty())
+            fname << "-" << o.imageName;
+        fname << "." << ext;
+
+        std::ofstream ofs(fname.str(), std::ios::binary);
+        if (!ofs)
+            continue;
+        ofs.write(reinterpret_cast<const char *>(content.data() + streamStart), streamLen);
+        ofs.close();
+        outFiles.push_back(fname.str());
+    }
+
+    return outFiles;
 }

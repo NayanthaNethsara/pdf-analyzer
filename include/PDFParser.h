@@ -31,4 +31,7 @@ public:
     void parseObjects(); // Parse objects safely for binary PDFs
     const std::vector<PDFObject> &getObjects() const;
     size_t getFileSize() const;
+
+    // Export image streams to the given directory. Returns vector of output file paths.
+    std::vector<std::string> exportImages(const std::string &outDir) const;
 };
